@@ -34,6 +34,7 @@ docker compose -f nginx/docker-compose.yml up -d
 sudo certbot certonly --webroot -w /var/www/certbot \
   -d apptronium.com \
   -d www.apptronium.com \
+  -d jenkins.apptronium.com \
   -d ratesageai.apptronium.com \
   --agree-tos
 
@@ -76,6 +77,7 @@ sudo certbot renew --dry-run
 sudo certbot certonly --webroot -w /var/www/certbot \
   -d apptronium.com \
   -d www.apptronium.com \
+  -d jenkins.apptronium.com \
   -d ratesageai.apptronium.com \
   -d newservice.apptronium.com \
   --expand --agree-tos
