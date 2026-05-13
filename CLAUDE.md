@@ -34,8 +34,8 @@ Internet (80/443)
      │
      └──→ Jenkins (jenkins.apptronium.com)
 
-PostgreSQL 17 (shared)
-  ├── database: kong
+PostgreSQL 17 (shared)        Redis 8 (shared)
+  ├── database: kong              └── redis:6379 ← all services
   └── database: app_ratesageai
 ```
 
@@ -52,6 +52,7 @@ PostgreSQL 17 (shared)
 | Kong config management | `deck` (declarative YAML, version-controlled) |
 | Kong Admin API | Internal only — never publicly exposed |
 | Database | PostgreSQL 17, shared instance, one DB per service |
+| Cache | Redis 8, shared instance, used by application services |
 | Jenkins | Retained at `jenkins.apptronium.com`, proxied directly by Nginx |
 
 ---
@@ -77,6 +78,7 @@ docker network create apptronium_net
 |---|---|
 | `postgres_data` | PostgreSQL persistent storage |
 | `kong_prefix` | Kong runtime prefix dir |
+| `redis_data` | Redis persistent storage |
 
 Nginx config and Certbot certs are bind-mounted from host paths.
 
@@ -171,6 +173,20 @@ PostgreSQL is only reachable within `apptronium_net`. No host port binding.
 
 ---
 
+## Redis Strategy
+
+One Redis 8 container, shared across all application services.
+
+- Hostname within `apptronium_net`: `redis`
+- Port: `6379`
+- Connection string for application containers: `redis://redis:6379`
+
+`redis_data` volume persists data across restarts.
+
+Redis is only reachable within `apptronium_net`. No host port binding.
+
+---
+
 ## Workflow Reference
 
 ### Start the stack for the first time
@@ -227,8 +243,10 @@ kong_gateway_setup/
 ├── kong/
 │   ├── docker-compose.yml
 │   └── kong.yaml              ← declarative deck config
-└── postgres17/
-    ├── docker-compose.yml
-    └── initdb.d/
-        └── 01-init.sh         ← create databases and users from env vars
+├── postgres17/
+│   ├── docker-compose.yml
+│   └── initdb.d/
+│       └── 01-init.sh         ← create databases and users from env vars
+└── redis/
+    └── docker-compose.yml
 ```

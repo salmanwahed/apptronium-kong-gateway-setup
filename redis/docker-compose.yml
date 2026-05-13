@@ -1,0 +1,16 @@
+services:
+  redis:
+    image: redis:8.2-bookworm
+    container_name: redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - apptronium_net
+
+volumes:
+  redis_data:
+
+networks:
+  apptronium_net:
+    external: true
