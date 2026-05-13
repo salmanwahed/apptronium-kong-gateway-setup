@@ -1,0 +1,20 @@
+_format_version: "3.0"
+
+plugins:
+  - name: key-auth
+    config:
+      key_names:
+        - apikey
+
+services:
+  - name: ratesageai
+    url: http://ratesageai:3000
+    routes:
+      - name: ratesageai-route
+        hosts:
+          - ratesageai.apptronium.com
+
+consumers:
+  - username: ratesageai-app
+    keyauth_credentials:
+      - key: REPLACE_WITH_STRONG_API_KEY

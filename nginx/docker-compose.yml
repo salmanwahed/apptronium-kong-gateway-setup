@@ -1,0 +1,19 @@
+services:
+    nginx:
+        image: nginx:1.26-bookworm
+        container_name: nginx_production
+        restart: unless-stopped
+        ports:
+            - "80:80"
+            - "443:443"
+        volumes:
+            - ../html:/usr/share/nginx/html:ro
+            - ./conf.d:/etc/nginx/conf.d:ro
+            - /var/www/certbot:/var/www/certbot:ro
+            - /etc/letsencrypt:/etc/letsencrypt:ro
+        networks:
+            - apptronium_net
+
+networks:
+    apptronium_net:
+        external: true

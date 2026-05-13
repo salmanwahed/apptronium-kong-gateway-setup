@@ -1,0 +1,105 @@
+# ─────────────────────────────────────────────
+# Initial server setup (run once on the VPS)
+# ─────────────────────────────────────────────
+
+# Create shared Docker network
+docker network create apptronium_net
+
+# Install Certbot (host OS, not containerized)
+sudo apt update && sudo apt install certbot -y
+
+# Install deck (Kong declarative config tool)
+# https://docs.konghq.com/deck/latest/installation/
+curl -sL https://github.com/kong/deck/releases/latest/download/deck_linux_amd64.tar.gz | tar xz
+sudo mv deck /usr/local/bin/
+
+# Create Certbot webroot directory (served by the Nginx container)
+sudo mkdir -p /var/www/certbot
+sudo chown $USER:$USER /var/www/certbot
+
+
+# ─────────────────────────────────────────────
+# First-time stack startup
+# ─────────────────────────────────────────────
+
+# 1. Copy and fill in secrets
+cp .env.example .env
+# edit .env with real passwords before proceeding
+
+# 2. Start Nginx (HTTP only at first, for ACME challenge)
+docker compose -f nginx/docker-compose.yml up -d
+
+# 3. Obtain SSL certificates via Certbot webroot challenge
+#    Add all subdomains here. Re-run with --expand when adding new ones.
+sudo certbot certonly --webroot -w /var/www/certbot \
+  -d apptronium.com \
+  -d www.apptronium.com \
+  -d ratesageai.apptronium.com \
+  --agree-tos
+
+# 4. Start PostgreSQL
+docker compose -f postgres17/docker-compose.yml up -d
+
+# 5. Run Kong database migrations (one-shot, wait for postgres to be ready first)
+docker compose -f kong/docker-compose.yml run --rm kong-migrations
+
+# 6. Start Kong
+docker compose -f kong/docker-compose.yml up -d kong
+
+# 7. Push declarative Kong config
+deck sync -s kong/kong.yaml --kong-addr http://localhost:8001
+
+# 8. Reload Nginx to activate HTTPS blocks
+docker exec nginx_production nginx -s reload
+
+
+# ─────────────────────────────────────────────
+# Day-to-day operations
+# ─────────────────────────────────────────────
+
+# Reload Nginx config without downtime
+docker exec nginx_production nginx -s reload
+
+# Apply Kong config changes
+deck sync -s kong/kong.yaml --kong-addr http://localhost:8001
+
+# Check Kong routes
+curl http://localhost:8001/routes
+
+# End-to-end health check
+curl -I https://ratesageai.apptronium.com/health
+
+# Cert renewal dry run
+sudo certbot renew --dry-run
+
+# Expand cert when adding a new subdomain (include ALL existing domains + new one)
+sudo certbot certonly --webroot -w /var/www/certbot \
+  -d apptronium.com \
+  -d www.apptronium.com \
+  -d ratesageai.apptronium.com \
+  -d newservice.apptronium.com \
+  --expand --agree-tos
+
+
+# ─────────────────────────────────────────────
+# Adding a new service database + user
+# ─────────────────────────────────────────────
+#
+# Approach: never re-run 01-init.sh (it only fires on an empty volume).
+# Instead connect directly to the running Postgres container and create
+# the database and user manually, then persist the credentials in .env
+# and .env.example for future reference.
+#
+# Step 1 — Add credentials to .env (and .env.example without real values)
+#   APP_NEWSERVICE_PASSWORD=your_strong_password_here
+#
+# Step 2 — Create the user and database inside the running container
+docker exec -it postgres_production psql -U postgres -c "CREATE USER app_newservice WITH PASSWORD 'your_strong_password_here';"
+docker exec -it postgres_production psql -U postgres -c "CREATE DATABASE app_newservice OWNER app_newservice;"
+#
+# Step 3 — Verify
+docker exec -it postgres_production psql -U postgres -c "\l"
+#
+# NOTE: If you ever need to rebuild the Postgres volume from scratch,
+# add the new CREATE USER / CREATE DATABASE statements to 01-init.sh
+# before running `docker compose up` so the fresh volume is fully initialized.

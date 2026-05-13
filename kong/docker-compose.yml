@@ -1,0 +1,42 @@
+services:
+  kong-migrations:
+    image: kong:3.9
+    container_name: kong-migrations
+    command: kong migrations bootstrap
+    env_file:
+      - ../.env
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: postgres
+      KONG_PG_DATABASE: kong
+      KONG_PG_USER: kong
+    networks:
+      - apptronium_net
+    restart: on-failure
+
+  kong:
+    image: kong:3.9
+    container_name: kong
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: postgres
+      KONG_PG_DATABASE: kong
+      KONG_PG_USER: kong
+      KONG_PROXY_LISTEN: 0.0.0.0:8000
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+    ports:
+      # Admin API bound to localhost only — never publicly exposed
+      - "127.0.0.1:8001:8001"
+    networks:
+      - apptronium_net
+
+networks:
+  apptronium_net:
+    external: true
