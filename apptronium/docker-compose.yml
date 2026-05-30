@@ -1,0 +1,20 @@
+services:
+    apptronium:
+        image: linuxserver/grav:1.7.52
+        container_name: apptronium_production
+        restart: unless-stopped
+        environment:
+            - PUID=1000
+            - PGID=1000
+            - TZ=UTC
+        volumes:
+            - apptronium_data:/config
+        networks:
+            - apptronium_net
+
+volumes:
+    apptronium_data:
+
+networks:
+    apptronium_net:
+        external: true

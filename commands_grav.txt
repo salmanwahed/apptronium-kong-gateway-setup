@@ -1,0 +1,9 @@
+# Start Grav CMS container
+docker compose -f apptronium/docker-compose.yml up -d
+
+# Reload Nginx to apply updated config
+docker exec nginx_production nginx -t
+docker exec nginx_production nginx -s reload
+
+# Verify site is up
+curl -I https://apptronium.com
