@@ -84,6 +84,44 @@ sudo certbot certonly --webroot -w /var/www/certbot \
 
 
 # ─────────────────────────────────────────────
+# Monitoring (Netdata) — netdata.apptronium.com
+# ─────────────────────────────────────────────
+
+# 1. DNS: add an A record  netdata.apptronium.com -> VPS IP  (do this first)
+
+# 2. Create the Telegram alert config from the template, then add your
+#    bot token + chat id (the real file is gitignored — never committed)
+cp netdata/health_alarm_notify.conf.example netdata/health_alarm_notify.conf
+#    edit netdata/health_alarm_notify.conf:
+#      TELEGRAM_BOT_TOKEN="..."            (from @BotFather)
+#      DEFAULT_RECIPIENT_TELEGRAM="..."    (your numeric chat id)
+
+# 3. Create the dashboard password for basic-auth (prompts for a password)
+printf "admin:$(openssl passwd -apr1)\n" > nginx/conf.d/.htpasswd
+
+# 4. Expand the cert to cover the new subdomain
+#    (apptronium.com-0001 is the cert the API subdomains use)
+sudo certbot certonly --webroot -w /var/www/certbot \
+  -d ratesageai.apptronium.com \
+  -d netdata.apptronium.com \
+  --cert-name apptronium.com-0001 --expand --agree-tos
+
+# 5. Start Netdata (internal only — no published port; Nginx proxies to it)
+docker compose -f netdata/docker-compose.yml up -d
+
+# 6. Reload Nginx to activate the netdata.apptronium.com block
+docker exec nginx_production nginx -s reload
+
+# 7. Verify the container is healthy, then open the dashboard
+docker ps --filter name=netdata
+docker logs --tail 20 netdata
+#    Browser: https://netdata.apptronium.com  (login: admin + your password)
+
+# 8. Send a test alert to confirm Telegram delivery
+docker exec -it netdata /usr/libexec/netdata/plugins.d/alarm-notify.sh test
+
+
+# ─────────────────────────────────────────────
 # Adding a new service database + user
 # ─────────────────────────────────────────────
 #

@@ -1,5 +1,7 @@
 # Secrets
 .env
+nginx/conf.d/.htpasswd
+netdata/health_alarm_notify.conf
 
 # OS
 .DS_Store

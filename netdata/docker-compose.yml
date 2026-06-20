@@ -1,0 +1,46 @@
+services:
+  netdata:
+    image: netdata/netdata:stable
+    container_name: netdata
+    hostname: apptronium-vps
+    restart: unless-stopped
+    # Read host process/namespace info so per-container + host metrics resolve
+    pid: host
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    environment:
+      # Disable anonymous telemetry
+      - DO_NOT_TRACK=1
+    volumes:
+      # Persistent state
+      - netdataconfig:/etc/netdata
+      - netdatalib:/var/lib/netdata
+      - netdatacache:/var/cache/netdata
+      # Version-controlled overrides (take precedence over the volume above)
+      - ./netdata.conf:/etc/netdata/netdata.conf:ro
+      - ./health_alarm_notify.conf:/etc/netdata/health_alarm_notify.conf:ro
+      # Host + container metric sources (all read-only)
+      - /:/host/root:ro,rslave
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/log:/host/var/log:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # Internal only — no published host port. Nginx proxies to netdata:19999
+    # over apptronium_net, gated by HTTP basic-auth.
+    networks:
+      - apptronium_net
+
+volumes:
+  netdataconfig:
+  netdatalib:
+  netdatacache:
+
+networks:
+  apptronium_net:
+    external: true

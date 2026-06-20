@@ -1,0 +1,21 @@
+# Netdata alert routing — Telegram only.
+#
+# Copy this file to health_alarm_notify.conf and fill in real values:
+#     cp health_alarm_notify.conf.example health_alarm_notify.conf
+# The real file is gitignored because it holds your bot token.
+#
+# alarm-notify.sh sets sane defaults for every channel before sourcing this
+# file, so overriding just the Telegram variables is enough.
+# Reference: https://learn.netdata.cloud/docs/alerting/notifications/agent-dispatched-notifications/telegram
+
+# Email needs a working local MTA — leave it off on a single VPS.
+SEND_EMAIL="NO"
+
+# Enable Telegram push notifications.
+SEND_TELEGRAM="YES"
+
+# Create a bot with @BotFather to get the token.
+TELEGRAM_BOT_TOKEN="123456789:PASTE_YOUR_BOT_TOKEN"
+
+# Your numeric chat id (message @myidbot, or use getUpdates on the bot API).
+DEFAULT_RECIPIENT_TELEGRAM="PASTE_YOUR_CHAT_ID"
